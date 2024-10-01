@@ -1,7 +1,7 @@
 package org.example;
 
 
-import javax.swing.text.Style;
+
 
 public class Main {
     public static void main(String[] args) {
@@ -18,8 +18,8 @@ public class Main {
 
         Balance bowl = new Balance();
 
-        bowl.Lweight = 30;
-        bowl.Rweight = 40;
+        bowl.addRight(40);
+        bowl.addLeft(30);
         bowl.result();
 
     // 3
