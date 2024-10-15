@@ -43,5 +43,16 @@ public class Main {
         num.even();
         num.odd();
 
+    // 5
+        Table table = new Table(3, 4);
+        table.setValue(0, 1, 5);
+        table.setValue(1, 2, 10);
+
+        System.out.println("Таблица:");
+        System.out.println(table);
+
+        System.out.println("Среднее значение: " + table.average());
+
+
     }
 }
