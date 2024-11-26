@@ -1,101 +1,125 @@
+package org.example;
+
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
-import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
-
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.Reader;
 import java.lang.reflect.Type;
 import java.util.*;
 import java.util.stream.Collectors;
 
-@Data
-public class Visitor {
-    private String firstName;
-    private String lastName;
-    private String phoneNumber;
-    private List<Book> favoriteBooks;
-    private boolean subscribeToNewsletter;
-}
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import java.util.List;
 
-@Getter
-@Setter
-public class Book {
-    private String title;
-    private String author;
-    private int yearOfPublication;
-    private String ISBN;
-    private String publisher;
+@Data
+@NoArgsConstructor
+class Visitor {
+    String name;
+    String lastName;
+    String phoneNumber;
+    List<Book> favoriteBooks;
+    boolean subscribesToNewsletter;
 }
 
 @Data
-public class SmsMessage {
-    private String phoneNumber;
-    private String message;
+@NoArgsConstructor
+class Book {
+    String title;
+    String author;
+    int publicationYear;
+    String isbn;
+    String publisher;
 }
 
-public class Library {
-    public static void main(String[] args) throws IOException {
+@Data
+@AllArgsConstructor
+class SmsMessage {
+    String phoneNumber;
+    String message;
+}
+class LibraryVisitors {
+
+    public static void main(String[] args) {
         Gson gson = new GsonBuilder().create();
-        Type visitorListType = new TypeToken<ArrayList<Visitor>>() {}.getType();
-        List<Visitor> visitors = gson.fromJson(new FileReader("book.json"), visitorListType);
+        List<Visitor> visitors = parseJson("C:\\Users\\anton\\IdeaProjects\\mirko\\shkola\\src\\main\\java\\org\\example\\books.json", gson);
 
-        // Задание 1
-        System.out.println("Список посетителей:");
-        visitors.forEach(visitor -> System.out.println(visitor.getFirstName() + " " + visitor.getLastName()));
-        System.out.println("Количество посетителей: " + visitors.size());
 
-        // Задание 2
-        List<Book> allFavoriteBooks = visitors.stream()
-                .flatMap(visitor -> visitor.getFavoriteBooks().stream())
-                .distinct()
+        // Task 1: List of visitors and their count
+        System.out.println("Visitors:");
+        long visitorCount = visitors.stream().peek(System.out::println).count();
+        System.out.println("Total visitors: " + visitorCount);
+        System.out.println();
+
+
+        // Task 2: List and count of unique books
+        Set<Book> uniqueBooks = visitors.stream()
+                .flatMap(v -> v.getFavoriteBooks().stream())
+                .collect(Collectors.toSet());
+        System.out.println("Unique books:");
+        uniqueBooks.forEach(System.out::println);
+        System.out.println("Total unique books: " + uniqueBooks.size());
+        System.out.println();
+
+
+        // Task 3: Sorted list of books by publication year
+        List<Book> sortedBooks = visitors.stream()
+                .flatMap(v -> v.getFavoriteBooks().stream())
+                .sorted(Comparator.comparingInt(Book::getPublicationYear))
                 .collect(Collectors.toList());
-        System.out.println("\nСписок книг в избранном (без повторений):");
-        allFavoriteBooks.forEach(book -> System.out.println(book.getTitle() + " by " + book.getAuthor()));
-        System.out.println("Количество книг в избранном: " + allFavoriteBooks.size());
+        System.out.println("Sorted books by publication year:");
+        sortedBooks.forEach(System.out::println);
+        System.out.println();
 
-        // Задание 3
-        System.out.println("\nСписок книг, отсортированный по издателям:");
-        allFavoriteBooks.stream()
-                .sorted(Comparator.comparing(Book::getPublisher))
-                .forEach(book -> System.out.println(book.getTitle() + " by " + book.getAuthor() + " (Publisher: " + book.getPublisher() + ")"));
 
-        // Задание 4
-        boolean janeAustenBookFound = visitors.stream()
-                .anyMatch(visitor -> visitor.getFavoriteBooks().stream()
-                        .anyMatch(book -> book.getAuthor().equals("Jane Austen")));
-        System.out.println("\nЕсть ли у кого-то в избранном книга автора \"Джейн Остин\": " + janeAustenBookFound);
+        // Task 4: Check for Jane Austen's book
+        boolean janeAustenBookExists = visitors.stream()
+                .flatMap(v -> v.getFavoriteBooks().stream())
+                .anyMatch(b -> b.getAuthor().equals("Jane Austen"));
+        System.out.println("Does anyone have a Jane Austen book? " + janeAustenBookExists);
+        System.out.println();
 
-        // Задание 5
+
+        // Task 5: Maximum number of favorite books
         int maxFavoriteBooks = visitors.stream()
-                .mapToInt(visitor -> visitor.getFavoriteBooks().size())
-                .max()
-                .getAsInt();
-        System.out.println("\nНаибольшее количество добавленных в избранное книг: " + maxFavoriteBooks);
+                .mapToInt(v -> v.getFavoriteBooks().size())
+                .max().orElse(0);
+        System.out.println("Maximum number of favorite books: " + maxFavoriteBooks);
+        System.out.println();
 
-        // Задание 6
-        double averageFavoriteBooks = visitors.stream()
-                .mapToInt(visitor -> visitor.getFavoriteBooks().size())
-                .average()
-                .getAsDouble();
+
+        // Task 6: SMS messages based on average favorite books
+        double avgFavoriteBooks = visitors.stream()
+                .mapToInt(v -> v.getFavoriteBooks().size())
+                .average().orElse(0);
 
         List<SmsMessage> smsMessages = visitors.stream()
-                .filter(Visitor::isSubscribeToNewsletter)
-                .map(visitor -> {
-                    int favoriteBookCount = visitor.getFavoriteBooks().size();
-                    if (favoriteBookCount > averageFavoriteBooks) {
-                        return new SmsMessage(visitor.getPhoneNumber(), "Вы книжный червь!");
-                    } else if (favoriteBookCount < averageFavoriteBooks) {
-                        return new SmsMessage(visitor.getPhoneNumber(), "Читать больше!");
-                    } else {
-                        return new SmsMessage(visitor.getPhoneNumber(), "Fine!");
-                    }
+                .filter(Visitor::isSubscribesToNewsletter)
+                .map(v -> {
+                    int bookCount = v.getFavoriteBooks().size();
+                    String message = bookCount > avgFavoriteBooks ? "you are a bookworm" :
+                            bookCount < avgFavoriteBooks ? "read more" : "fine";
+                    return new SmsMessage(v.getPhoneNumber(), message);
                 })
                 .collect(Collectors.toList());
 
-        System.out.println("\nSMS-сообщения для посетителей, подписанных на рассылку:");
-        smsMessages.forEach(smsMessage -> System.out.println("Номер: " + smsMessage.getPhoneNumber() + ", Сообщение: " + smsMessage.getMessage()));
+        System.out.println("SMS messages:");
+        smsMessages.forEach(System.out::println);
+
+    }
+
+
+    // Helper function to parse the JSON file
+    public static List<Visitor> parseJson(String filePath, Gson gson) {
+        Type listType = new TypeToken<List<Visitor>>() {}.getType();
+        try (Reader reader = new FileReader(filePath)) {
+            return gson.fromJson(reader, listType);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return new ArrayList<>(); // Return an empty list if there's an error
+        }
     }
 }
